@@ -1,26 +1,17 @@
 import tkinter as tk
 from tkinter import filedialog
-from tkinter.constants import ALL, BOTTOM, END, INSERT, LEFT, N, NE, NW, RIGHT, TOP, X, Y
-import tkinter.font as tkFont
-from typing import Text
 from synthesizer import Synthesizer
 import math as Math
-#import wave
 import soundfile
-
-import csv
-#import json
-
+#import csv
 
 class Interface():
-    #object which manages input detection and 
-    mouse_position : tuple
+    """manages visual elements and input detection of synthesizer application"""
     synth : Synthesizer
-    canv : tk.Canvas
     
-    root : tk.Tk
-
     #interface widgets
+    root : tk.Tk
+    canv : tk.Canvas
     settings_frame : tk.Frame       #settings frame, top
     track_frame : tk.Frame          #track frame, bottom
     length_frame : tk.Frame
@@ -31,32 +22,26 @@ class Interface():
     vol_slider : tk.Scale           #slider for track volume
     horiz_scroll : tk.Scrollbar     #horizontal scrollbar for track navigation
     vert_scroll : tk.Scrollbar      #vertical scrollbar for track navigation
-    duration_label : tk.Label
-    duration_box : tk.Entry          #user input for track duration
-    
-    canv_size : tuple
+    duration_label : tk.Label       #label for duration entry box
+    duration_box : tk.Entry         #user input for track duration
 
-    bar_number : int    #track bars
-    track_width : int   #width of track in pixels   #do i need this value?
-    track_height : int  #height of track in pixels
-    track_ypos : int    #distance from top of window to top of track space. in pixels
-    track_xpos : int    #distance from left side of window to left side of track space. in pixels
+    bar_number : int        #number of track rows
+    track_width : int       #width of track in pixels   #do i need this value?
+    track_height : int      #height of track in pixels
+    track_xpos : int = 30   #distance from left side of window to left side of track space. in pixels
+    track_ypos : int = 30   #distance from top of window to top of track space. in pixels
     
-    #bottom_pad : int = 0       #pad between bottom of track and bottom of canvas.
     bar_height : int            #height of bars of tracks. in pixels
     time_to_pixels : int = 100  #conversion ratio for note length to pixels. in pixels/second
     note_height : int           #height of notes(within track bars). in pixels
     note_pad : int = 2          #padding between note rects and surrounding bars. in pixels
-    #noteseg_pad : int = 2      #small gap for the edges of notes. in pixels.
     noteseg_width : int         #min width of a note. in pixels.
     notes : list                #ids for note rects drawn to canvas.
     bars : list                 #ids for track bars drawn to canvas.
     note_names : list           #ids for note names (text) drawn to canvas.
-    length_entry : tk.StringVar #str= ''          #track length input (unsanitized)
+    length_entry : tk.StringVar #track length input (unsanitized)
 
     view_pos : tuple[int,int] = (0,0) #position of top left corner of view, where 0,0 shows top left of track, and track_size-view_size = bottom right of track.
-
-    note_font : tkFont.Font
 
     noteseg_dict : dict = dict()    #breaks notes into segments which are used by the ui. key:val =  (seg_id,pitch):(time,pitch), where value tuple functions as a key for track_notes
 
@@ -68,27 +53,25 @@ class Interface():
         self.synth = synth
 
         self.window_size = (800,600)
-        self.canv_size = (800,530)  #should work.
-        #print(self.canv_size)
         root.geometry(str(self.window_size[0])+'x'+str(self.window_size[1]))
 
         self.settings_frame = tk.Frame(root)
-        self.settings_frame.pack(anchor = tk.N)#side=TOP)
+        self.settings_frame.pack(anchor = tk.N)
         self.track_frame = tk.Frame(root)
-        self.track_frame.pack(fill='both', expand= True, anchor = tk.W)#pack(side=BOTTOM)
+        self.track_frame.pack(fill='both', expand= True, anchor = tk.W)
 
-        self.canv = tk.Canvas(self.track_frame)#, width=self.canv_size[0], height=self.canv_size[1]-70)
+        self.canv = tk.Canvas(self.track_frame)
         self.canv.configure(scrollregion=self.canv.bbox("all"))
 
         self.horiz_scroll = tk.Scrollbar(self.track_frame,orient=tk.HORIZONTAL,command=self.canv.xview)
-        self.horiz_scroll.pack(side=BOTTOM,fill= X)
+        self.horiz_scroll.pack(side='bottom',fill= 'x')
         self.canv.configure(xscrollcommand=self.horiz_scroll.set)
 
         self.vert_scroll = tk.Scrollbar(self.track_frame,orient=tk.VERTICAL,command=self.canv.yview)
-        self.vert_scroll.pack(side=RIGHT,fill= Y)
+        self.vert_scroll.pack(side='right',fill= 'y')
         self.canv.configure(yscrollcommand=self.vert_scroll.set)
 
-        self.canv.pack(fill='both',expand=True,side=tk.TOP,anchor='nw')
+        self.canv.pack(fill='both',expand=True,side='top',anchor='nw')
 
         #frame to hold duration label and entry
         self.length_frame = tk.Frame(self.settings_frame)
@@ -103,31 +86,26 @@ class Interface():
 
         #button widgets.
         self.play_butn = tk.Button(self.settings_frame,text="Play Track", command=self.play_sound)
-        self.play_butn.pack(padx=4,side=tk.LEFT)
+        self.play_butn.pack(padx=4,side='left')
         self.stop_butn = tk.Button(self.settings_frame,text="Stop Track", command=self.synth.stop_track)
-        self.stop_butn.pack(padx=4,side=tk.LEFT)
+        self.stop_butn.pack(padx=4,side='left')
         self.clear_butn = tk.Button(self.settings_frame,text="Clear Track", command=self.clear_track)
-        self.clear_butn.pack(padx=4,side=tk.LEFT)
+        self.clear_butn.pack(padx=4,side='left')
+        self.export_butn = tk.Button(self.settings_frame,text="Export WAV",command=self.export_track)
+        self.export_butn.pack(padx=4,side='left')
 
         #interfaces directionly with synthesizer.
         self.vol_slider = tk.Scale(self.settings_frame,from_=0,to=100,orient=tk.HORIZONTAL,showvalue=0,label="Volume",command=synth.set_volume)
         self.vol_slider.set(synth.volume)   #set current position to synth volume.
-        self.vol_slider.pack(padx=4,side=tk.RIGHT)
-
-        self.export_butn = tk.Button(self.settings_frame,text="Export WAV",command=self.export_track)
-        self.export_butn.pack(padx=4,side=tk.RIGHT)
-
+        self.vol_slider.pack(padx=4,side='right')
         
         self.bar_number = (synth.upper_octave-synth.lower_octave+1)*12
 
         self.track_width = synth.track_duration*self.time_to_pixels
 
-        self.track_ypos = 20    #makes space for note_times at the top of canvas.
-        self.track_xpos = 30    #makes space for note_names on left of canvas.
-
-        self.bar_height = int((600-self.track_ypos)/24)   #int((self.canv_size[1] - self.track_ypos - self.bottom_pad) / self.bar_number)    #calc bar height.
+        self.bar_height = int((600-self.track_ypos)/24) #calc bar height. displays roughtly 24 bars to the screen pre-resize. however it doesn't factor in the settings frame height.
         self.note_height = self.bar_height
-        self.noteseg_width = self.synth.min_note*self.time_to_pixels    #trying a float#int(self.synth.min_note*self.time_to_pixels)
+        self.noteseg_width = self.synth.min_note*self.time_to_pixels
         
         self.track_height = self.bar_number*self.bar_height
         
@@ -136,17 +114,11 @@ class Interface():
         self.note_names = list()
         self.note_times = list()
 
-        self.note_font = tkFont.Font(family="Times",size=-self.bar_height)
         self.track_frame.bind('<Configure>',self.conf)
         self.canv.bind('<B1-Motion>',self.lmb_dragged)
         self.canv.bind('<ButtonPress-1>',self.lmb_press)
         self.canv.bind('<ButtonPress-3>',self.rmb_pressed)
         self.canv.bind('<B3-Motion>',self.rmb_dragged)
-
-
-        #dev tool for creating demo songs
-        #self.root.bind('<Down>',self.export_song)
-        #self.root.bind('<Up>',self.import_song)
 
         self.vert_scroll.bind_all('<MouseWheel>', self.on_vscroll)
         self.horiz_scroll.bind_all('<Shift-MouseWheel>',self.on_hscroll)
@@ -155,11 +127,9 @@ class Interface():
         self.duration_box.icursor(0)
         self.update_canvas()
         
-        
     def conf(self,event):
         """resize canvas bbox on window resize"""
         self.canv.configure(scrollregion=self.canv.bbox('all'))
-
 
     def play_sound(self):
         """update and play track"""
@@ -199,7 +169,6 @@ class Interface():
                 self.selected_length = 1
             self.set_note(self.selected_note,self.selected_length*self.synth.min_note)
             self.update_notes() #redraws notes.
-        #maybe here i would have checks for button clicks? or maybe i have separate widgets to handle the buttons, and they just interface with the interface object.
         else:
             self.selected_length = 0
 
@@ -242,7 +211,8 @@ class Interface():
         """resizes track_duration and handles cutoff note deletion"""
         self.synth.track_duration = dur
         self.track_width = self.synth.track_duration*self.time_to_pixels
-        #need to remove notes that extend past the new cutoff. 
+
+        #remove notes that extend past the new cutoff. 
         cutoff = int(dur/self.synth.min_note)
         for n in list(self.noteseg_dict.keys()):
             if n[0] >= cutoff and n in self.noteseg_dict:
@@ -285,16 +255,18 @@ class Interface():
     
     def draw_bars(self):
         """draws track bars to canvas"""
-        for i in range(1,self.bar_number+1):
+        
+        for i in range(1,self.bar_number+1):    #create horizontal lines
             self.bars.append(self.canv.create_line(self.track_xpos,self.track_ypos+i*self.bar_height,self.track_xpos + self.track_width,self.track_ypos+i*self.bar_height,fill='#000000')) #create lines from notes
-        #i'll just but vert bars here.
-        for i in range(int(self.synth.track_duration/self.synth.min_note)):
+        
+        for i in range(int(self.synth.track_duration/self.synth.min_note)): #create vertical lines
             col = '#000000' if i*self.synth.min_note%1 == 0 else '#9B9B9B'
             self.bars.append(self.canv.create_line(self.track_xpos+i*self.synth.min_note*self.time_to_pixels,self.track_ypos,(self.track_xpos+i*self.synth.min_note*self.time_to_pixels,self.track_ypos+self.track_height),width=1,fill=col))
 
-        #draw a final, thick line to cap off the track.
-        self.bars.append(self.canv.create_line(self.track_xpos+self.track_width,self.track_ypos,self.track_xpos+self.track_width,self.track_ypos+self.track_height+1,width=3,fill="#000000"))#draw right line, this is so it's drawn atop the vertical lines.
-        self.bars.append(self.canv.create_line(self.track_xpos,self.track_ypos,self.track_xpos + self.track_width,self.track_ypos,fill='#000000')) #draw top line
+        #draw rightmost bars wider to cap off the track.
+        self.bars.append(self.canv.create_line(self.track_xpos+self.track_width,self.track_ypos,self.track_xpos+self.track_width,self.track_ypos+self.track_height+1,width=3,fill="#000000"))
+        #draw top bar last top be above vertical grey bars.
+        self.bars.append(self.canv.create_line(self.track_xpos,self.track_ypos,self.track_xpos + self.track_width,self.track_ypos,fill='#000000'))
     
     def draw_notes(self):
         """draws notes to canvas"""
@@ -321,7 +293,7 @@ class Interface():
     def draw_note_times(self):
         """draw second indicators to canvas"""
         #draws current time along columns at each second increment.
-        text_pad = 2#self.synth.min_note*self.time_to_pixels/2
+        text_pad = 2
         for i in range(int(self.synth.track_duration)):
             self.note_times.append(self.canv.create_text(self.track_xpos+i*self.time_to_pixels+text_pad,self.track_ypos-8,text=i))#,anchor="n"))
     
@@ -363,8 +335,8 @@ class Interface():
     
     def global_to_track(self,glob:tuple):
         """converts position within canvas to position within track"""
-        bbox_width = self.canv.bbox(ALL)[2]-self.canv.bbox(ALL)[0]
-        bbox_height = self.canv.bbox(ALL)[3]-self.canv.bbox(ALL)[1]
+        bbox_width = self.canv.bbox('all')[2]-self.canv.bbox('all')[0]
+        bbox_height = self.canv.bbox('all')[3]-self.canv.bbox('all')[1]
         
         x = (glob[0] - self.track_xpos+self.canv.xview()[0]*bbox_width)/self.noteseg_width
         y = (glob[1] - self.track_ypos+self.canv.yview()[0]*bbox_height)/self.bar_height
@@ -373,7 +345,6 @@ class Interface():
         x = -1 if x < 0 else int(x)
         y = -1 if y < 0 else int(y)
         return (x,y)
-        
 
     def is_noteseg_occupied(self,key:tuple)->bool:
         """returns if noteseg occupied"""

@@ -6,9 +6,8 @@ import math as Math
 class Synthesizer:
     track_duration : float = 20.0 #in seconds
     samplerate : int = 22050
-    min_note : float = 1/2  #min 8th notes, 4/4 time signature from 16th notes.
+    min_note : float = 1/8  #4/4 time signature, 8th notes.
     segment_size : int = int(samplerate*min_note)  #16th note to wave values
-    # track_height : int = 24   #daefault 2 octaves
     base_freqs = [16.35,17.32,18.35,19.45,20.60,21.83,23.12,24.50,25.96,27.50,29.14,30.87]  #from c0 to b0
     base_note_names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B",]
     cur_note_names = []
@@ -19,7 +18,7 @@ class Synthesizer:
     track_notes : dict = {}     #notes stored as (time,pitch) = duration, where time is [noteseg_duration * time] seconds into the track. pitch is relative to base octave(base set of 12 notes, in which the first note is C0(16.35 hz). duration is in seconds)
     volume : float = 40
 
-    def __init__(self,lower:int,upper:int,duration,rate = 44100, min_note_length : float = 1/2):
+    def __init__(self,lower:int,upper:int,duration,rate = 44100, min_note_length : float = 1/8):
         self.lower_octave = lower
         self.upper_octave = upper
         self.samplerate = rate
