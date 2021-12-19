@@ -255,7 +255,6 @@ class Interface():
     
     def draw_bars(self):
         """draws track bars to canvas"""
-        
         for i in range(1,self.bar_number+1):    #create horizontal lines
             self.bars.append(self.canv.create_line(self.track_xpos,self.track_ypos+i*self.bar_height,self.track_xpos + self.track_width,self.track_ypos+i*self.bar_height,fill='#000000')) #create lines from notes
         
@@ -335,11 +334,12 @@ class Interface():
     
     def global_to_track(self,glob:tuple):
         """converts position within canvas to position within track"""
+        bbox = self.canv.bbox('all')
         bbox_width = self.canv.bbox('all')[2]-self.canv.bbox('all')[0]
         bbox_height = self.canv.bbox('all')[3]-self.canv.bbox('all')[1]
-        
-        x = (glob[0] - self.track_xpos+self.canv.xview()[0]*bbox_width)/self.noteseg_width
-        y = (glob[1] - self.track_ypos+self.canv.yview()[0]*bbox_height)/self.bar_height
+
+        x = (glob[0] - (self.track_xpos+2)+bbox[0]+self.canv.xview()[0]*bbox_width)/self.noteseg_width
+        y = (glob[1] - (self.track_ypos+2)+bbox[1]+self.canv.yview()[0]*bbox_height)/self.bar_height
 
             #bugfix. int was flooring negative decimal to 0
         x = -1 if x < 0 else int(x)
@@ -393,7 +393,7 @@ class Interface():
 
 def main():
     window = tk.Tk() #base widget
-    window.title("Sine Synthesizer")
+    window.title("SineSynth")
     interface = Interface(Synthesizer(2,7,15,min_note_length=1/8),window)
 
     #demo song
